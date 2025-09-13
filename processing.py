@@ -12,8 +12,6 @@ class Parameters:
     shell_delta: float
     longitude: float
     longitude_delta: float
-    orbit_directory: str
-    datafile_directory: str
     output_filename: str
 
 
