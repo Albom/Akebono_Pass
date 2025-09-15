@@ -1,9 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
-from tkcalendar import DateEntry
-import os
-import datetime as dt
 
 
 class DatabaseWindow:
@@ -11,11 +8,6 @@ class DatabaseWindow:
         self.parent = parent
         self.window = tk.Toplevel(parent)
         self.window.title("Akebono_Pass 0.1")
-
-        # icon_image = tk.PhotoImage(
-        #     file=os.path.join(os.path.dirname(__file__), "images/icon.png")
-        # )
-        # self.window.iconphoto(True, icon_image)
 
         self.window.resizable(False, False)
 
@@ -67,5 +59,6 @@ class DatabaseWindow:
         self.datafile_directory_entry.insert(0, directory_path)
 
     def run(self):
+        self.window.transient(self.parent)
+        self.window.grab_set()
         self.parent.wait_window(self.window)
-        self.window.mainloop()
