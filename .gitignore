@@ -4,3 +4,4 @@ akebono_pass.dist/
 akebono_pass.onefile-build/
 *.exe
 *.db
+*.txt

@@ -1,5 +1,4 @@
 import datetime as dt
-import bz2
 
 
 def load_data(filename):
@@ -28,22 +27,25 @@ def load_data(filename):
 def load_orbits(filename):
 
     table = []
-    with bz2.open(filename, "rt") as file:
-        table = [x.strip().split() for x in file.readlines()[4:]]
+    with open(filename, "rt", encoding="ascii") as file:
+        table = [x.strip().split() for x in file.readlines()[1:]]
 
     orbits = []
     for r in table:
-        year = int(r[0][:2])
+        year = int(r[1][:2])
         year += 1900 if year > 50 else 2000
-        month = int(r[0][3:5])
-        day = int(r[0][6:8])
-        hour = int(r[1][:2])
-        minute = int(r[1][3:5])
-        second = int(r[1][6:8])
+        month = int(r[1][2:4])
+        day = int(r[1][4:6])
+        hour = int(r[1][6:8])
+        minute = int(r[1][8:10])
+        second = int(r[1][10:12])
         date = dt.datetime(year, month, day, hour, minute, second)
-        lat = float(r[2])
-        lon = float(r[3])
-        altitude = float(r[4]) - 6370.0
+        lat = float(r[27])
+        lon = float(r[28])
+        altitude = float(r[29])# - 6370.0
         orbits.append([date, altitude, lat, lon])
 
     return orbits
+
+# if __name__ == "__main__":
+#     load_orbits("ED960201.txt")

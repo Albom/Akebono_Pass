@@ -155,7 +155,7 @@ class Database:
 
     def create_database(self, orbit_directory, datafile_directory):
         data_files = glob.glob(f"{datafile_directory}/**/ne-????????.txt", recursive=True)
-        orbit_files = glob.glob(f"{orbit_directory}/**/????.txt.bz2", recursive=True)
+        orbit_files = glob.glob(f"{orbit_directory}/**/ED??????.txt", recursive=True)
         for filename in data_files:
             print(filename)
             data = load_data(filename)
