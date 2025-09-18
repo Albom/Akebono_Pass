@@ -32,6 +32,8 @@ def load_orbits(filename):
 
     orbits = []
     for r in table:
+        if r[1] == "UT":
+            break
         year = int(r[1][:2])
         year += 1900 if year > 50 else 2000
         month = int(r[1][2:4])
@@ -39,6 +41,12 @@ def load_orbits(filename):
         hour = int(r[1][6:8])
         minute = int(r[1][8:10])
         second = int(r[1][10:12])
+        if second == 60:
+            second = 0
+            minute += 1
+        if minute == 60:
+            minute = 0
+            hour += 1
         date = dt.datetime(year, month, day, hour, minute, second)
         lat = float(r[27])
         lon = float(r[28])
@@ -46,6 +54,3 @@ def load_orbits(filename):
         orbits.append([date, altitude, lat, lon])
 
     return orbits
-
-# if __name__ == "__main__":
-#     load_orbits("ED960201.txt")

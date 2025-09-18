@@ -1,13 +1,14 @@
+import os
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
+from database import Database
 
 
 class DatabaseWindow:
     def __init__(self, parent):
         self.parent = parent
         self.window = tk.Toplevel(parent)
-        self.window.title("Akebono_Pass 0.1")
 
         self.window.resizable(False, False)
 
@@ -19,7 +20,9 @@ class DatabaseWindow:
         self.orbit_directory_entry = tk.Entry(self.window)
         self.datafile_directory_entry = tk.Entry(self.window)
 
-        ok_button = tk.Button(self.window, text="Create database", command=self.on_button_press)
+        ok_button = tk.Button(
+            self.window, text="Create database", command=self.on_button_press
+        )
         choose_orbit_directory_button = tk.Button(
             self.window, text="Choose", command=self.choose_orbit_directory_button_press
         )
@@ -46,7 +49,19 @@ class DatabaseWindow:
         ok_button.grid(row=3, column=3, pady=5)
 
     def on_button_press(self):
-        pass
+
+        if os.path.isfile("akebono.db"):
+            return
+
+        orbit_directory = self.orbit_directory_entry.get()
+        datafile_directory = self.datafile_directory_entry.get()
+
+        if orbit_directory and datafile_directory:
+            db = Database()
+            db.connect("akebono.db")
+            db.create_data_table()
+            db.create_orbits_table()
+            db.create_database(orbit_directory, datafile_directory)
 
     def choose_orbit_directory_button_press(self):
         directory_path = filedialog.askdirectory()

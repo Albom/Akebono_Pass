@@ -167,16 +167,8 @@ class Database:
             print(filename)
             orbits = load_orbits(filename)
             for d in orbits:
-                date, altitude, lat, lon = d[0].isoformat(), d[1], d[2], d[3]
-                self.insert_orbits(date, altitude, lat, lon)
+                date, altitude, lat, lon = d
+                if date.second == 0:
+                    date = date.isoformat()
+                    self.insert_orbits(date, altitude, lat, lon)
             self.commit()
-
-
-if __name__ == "__main__":
-    db = Database()
-    print(db.connect("test.db"))
-    db.create_data_table()
-    db.create_orbits_table()
-    # db.insert_orbits("2010-01-23T12:31:45", 400.1, 2.1223223, 0.4)
-    # db.get_by_shell_and_lon(0.2, 0.03, 0, 0)
-    db.create_database("g:/Data/Akebono", "g:/Data/Akebono/Ne/")

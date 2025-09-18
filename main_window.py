@@ -74,7 +74,17 @@ class MainWindow:
 
         ok_button.grid(row=5, column=3, pady=5)
 
+        if not os.path.isfile("akebono.db"):
+            database_window = DatabaseWindow(self.window)
+            database_window.run()
+
     def on_button_press(self):
+
+        if not os.path.isfile("akebono.db"):
+            database_window = DatabaseWindow(self.window)
+            database_window.run()
+            return
+
         try:
             start_date = dt.date.fromisoformat(self.start_date.get())
             end_date = dt.date.fromisoformat(self.end_date.get())
@@ -109,9 +119,7 @@ class MainWindow:
         # self.orbit_directory_entry.insert(0, directory_path)
 
     def choose_output_filename_button_press(self):
-
-        database_window = DatabaseWindow(self.window)
-        database_window.run()
+        pass
 
         # filename = filedialog.asksaveasfilename(defaultextension=".txt")
         # self.output_filename_entry.delete(0, tk.END)
