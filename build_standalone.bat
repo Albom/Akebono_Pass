@@ -10,8 +10,7 @@ python -m nuitka ^
   --windows-icon-from-ico=images/icon.png ^
   --windows-company-name=IION ^
   --windows-product-name=akebono_pass ^
-  --windows-product-version=0.0.1 ^
-  --windows-file-description="Akebono" ^
+  --windows-product-version=0.1.0 ^
   akebono_pass.py
 
 rmdir /q /s akebono_pass.build

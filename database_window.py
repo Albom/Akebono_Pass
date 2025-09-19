@@ -62,6 +62,8 @@ class DatabaseWindow:
             db.create_data_table()
             db.create_orbits_table()
             db.create_database(orbit_directory, datafile_directory)
+            db.close()
+            self.window.destroy()
 
     def choose_orbit_directory_button_press(self):
         directory_path = filedialog.askdirectory()

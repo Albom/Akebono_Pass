@@ -84,7 +84,7 @@ class Database:
         orbits.altitude, data.altitude
         FROM orbits
         INNER JOIN
-        data ON orbits.date = data.date and data.date = '{date}'
+        data ON orbits.date = data.date and data.date = '{date}';
         """
         cur = self.conn.cursor()
         try:
@@ -100,7 +100,7 @@ class Database:
     def commit(self):
         self.conn.commit()
 
-    def get_by_shell_and_lon(self, shell, shell_delta, lon, lon_delta):
+    def get_by_date_shell_lon(self, start_date, end_date, shell, shell_delta, lon, lon_delta):
 
         min_lon = lon - lon_delta
         max_lon = lon + lon_delta
@@ -108,50 +108,60 @@ class Database:
         if min_lon < -180:
             q = f"""
             SELECT 
-            orbits.altitude, data.altitude
+            orbits.date, orbits.altitude, orbits.lat, orbits.lon, data.altitude, data.mlt, data.l_value, data.ne
             FROM orbits
             INNER JOIN
-            data ON orbits.date = data.date and 
-                    ABS(data.l_value - {shell}) < {shell_delta} and
-                    orbits.lon > -180 and
-                    orbits.lon < {lon} or
-                    orbits.lon > {min_lon} + 360 and
+            data ON orbits.date = data.date AND 
+                    orbits.date BETWEEN '{start_date}' AND '{end_date}' AND
+                    ABS(data.l_value - {shell}) < {shell_delta} AND
+                    orbits.lon > -180 AND
+                    orbits.lon < {lon} OR
+                    orbits.lon > {min_lon} + 360 AND
                     orbits.lon < 180
+            ORDER BY orbits.date;
             """
         elif max_lon > 180:
             q = f"""
             SELECT 
-            orbits.altitude, data.altitude
+            orbits.date, orbits.altitude, orbits.lat, orbits.lon, data.altitude, data.mlt, data.l_value, data.ne
             FROM orbits
             INNER JOIN
-            data ON orbits.date = data.date and 
-                    ABS(data.l_value - {shell}) < {shell_delta} and
-                    orbits.lon > {lon} and
-                    orbits.lon < 180 or
-                    orbits.lon > 0 and
+            data ON orbits.date = data.date AND 
+                    orbits.date BETWEEN '{start_date}' AND '{end_date}' AND
+                    ABS(data.l_value - {shell}) < {shell_delta} AND
+                    orbits.lon > {lon} AND
+                    orbits.lon < 180 OR
+                    orbits.lon > 0 AND
                     orbits.lon < max_lon - 360
+            ORDER BY orbits.date;
             """
         else:
             q = f"""
             SELECT 
-            orbits.altitude, data.altitude
+            orbits.date, orbits.altitude, orbits.lat, orbits.lon, data.altitude, data.mlt, data.l_value, data.ne
             FROM orbits
             INNER JOIN
-            data ON orbits.date = data.date and 
-                    ABS(data.l_value - {shell}) < {shell_delta} and
-                    orbits.lon > {min_lon} and
+            data ON orbits.date = data.date AND 
+                    orbits.date BETWEEN '{start_date}' AND '{end_date}' AND
+                    ABS(data.l_value - {shell}) < {shell_delta} AND
+                    orbits.lon > {min_lon} AND
                     orbits.lon < {max_lon} 
+            ORDER BY orbits.date;
             """
         cur = self.conn.cursor()
+
+        result = []
         try:
             cur.execute(q)
 
             for r in cur:
-                print(r)
+                result.append(r)
 
             cur.close()
         except sqlite3.Error as err:
             print(err)
+
+        return result
 
     def create_database(self, orbit_directory, datafile_directory):
         data_files = glob.glob(f"{datafile_directory}/**/ne-????????.txt", recursive=True)
