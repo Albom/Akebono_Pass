@@ -1,101 +1,129 @@
-import tkinter as tk
-from tkinter import ttk
-from tkcalendar import DateEntry
 import os
+from pathlib import Path
 import datetime as dt
-from processing import Parameters, Search
+
+from PySide6.QtCore import Qt, QDate
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import (
+    QWidget,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QDateEdit,
+    QFileDialog,
+    QGridLayout,
+    QFrame,
+    QMessageBox,
+)
+
 from database_window import DatabaseWindow
+from processing import Parameters, Search
 
 
-class MainWindow:
-    def __init__(self):
-        self.window = tk.Tk()
-        self.window.title("Akebono_Pass 0.1")
+class MainWindow(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
-        icon_image = tk.PhotoImage(
-            file=os.path.join(os.path.dirname(__file__), "images/icon.png")
-        )
-        self.window.iconphoto(True, icon_image)
+        self.setWindowTitle("Akebono_Pass 0.1")
+        self._setup_icon()
 
-        self.window.resizable(False, False)
+        lbl_L = QLabel("L:")
+        lbl_dL = QLabel("ΔL:")
+        lbl_Lon = QLabel("Lon:")
+        lbl_dLon = QLabel("ΔLon:")
+        lbl_out = QLabel("Output file:")
+        lbl_start = QLabel("Start date:")
+        lbl_end = QLabel("End date:")
 
-        label1 = tk.Label(self.window, text="L:")
-        label2 = tk.Label(self.window, text="ΔL:")
-        label3 = tk.Label(self.window, text="Lon:")
-        label4 = tk.Label(self.window, text="ΔLon:")
-        label7 = tk.Label(self.window, text="Output file:")
-        label8 = tk.Label(self.window, text="Start date:")
-        label9 = tk.Label(self.window, text="End date:")
+        self.shell_entry = QLineEdit()
+        self.shell_delta_entry = QLineEdit()
+        self.longitude_entry = QLineEdit()
+        self.longitude_delta_entry = QLineEdit()
+        self.output_filename_entry = QLineEdit()
 
-        separator = ttk.Separator(self.window, orient=tk.HORIZONTAL)
+        btn_submit = QPushButton("Submit")
+        btn_choose = QPushButton("Choose")
+        btn_submit.clicked.connect(self.on_button_press)
+        btn_choose.clicked.connect(self.choose_output_filename_button_press)
 
-        self.shell_entry = tk.Entry(self.window)
-        self.shell_delta_entry = tk.Entry(self.window)
-        self.longitude_entry = tk.Entry(self.window)
-        self.longitude_delta_entry = tk.Entry(self.window)
-        self.output_filename_entry = tk.Entry(self.window)
+        self.start_date = QDateEdit(calendarPopup=True)
+        self.end_date = QDateEdit(calendarPopup=True)
+        for d in (self.start_date, self.end_date):
+            d.setDisplayFormat("yyyy-MM-dd")
+            d.setDate(QDate.currentDate())
 
-        ok_button = tk.Button(self.window, text="Submit", command=self.on_button_press)
-        choose_output_filename_button = tk.Button(
-            self.window, text="Choose", command=self.choose_output_filename_button_press
-        )
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
 
-        self.start_date = DateEntry(
-            self.window, selectmode="day", date_pattern="yyyy-mm-dd"
-        )
-        self.end_date = DateEntry(
-            self.window, selectmode="day", date_pattern="yyyy-mm-dd"
-        )
+        grid = QGridLayout()
+        # Row 0 – L and ΔL
+        grid.addWidget(lbl_L, 0, 0, alignment=Qt.AlignmentFlag.AlignRight)
+        grid.addWidget(self.shell_entry, 0, 1)
+        grid.addWidget(lbl_dL, 0, 2, alignment=Qt.AlignmentFlag.AlignRight)
+        grid.addWidget(self.shell_delta_entry, 0, 3)
 
-        label1.grid(row=0, column=0, padx=5, pady=5, sticky="e")
-        self.shell_entry.grid(row=0, column=1, padx=5, pady=5)
+        # Row 1 – Lon and ΔLon
+        grid.addWidget(lbl_Lon, 1, 0, alignment=Qt.AlignmentFlag.AlignRight)
+        grid.addWidget(self.longitude_entry, 1, 1)
+        grid.addWidget(lbl_dLon, 1, 2, alignment=Qt.AlignmentFlag.AlignRight)
+        grid.addWidget(self.longitude_delta_entry, 1, 3)
 
-        label2.grid(row=0, column=2, padx=5, pady=5, sticky="e")
-        self.shell_delta_entry.grid(row=0, column=3, padx=5, pady=5)
+        # Row 2 – Output file + chooser
+        grid.addWidget(lbl_out, 2, 0, alignment=Qt.AlignmentFlag.AlignRight)
+        grid.addWidget(self.output_filename_entry, 2, 1, 1, 3)
+        grid.addWidget(btn_choose, 2, 4)
 
-        label3.grid(row=1, column=0, padx=5, pady=5, sticky="e")
-        self.longitude_entry.grid(row=1, column=1, padx=5, pady=5)
-        label4.grid(row=1, column=2, padx=5, pady=5, sticky="e")
-        self.longitude_delta_entry.grid(row=1, column=3, padx=5, pady=5)
+        # Row 3 – Start / End dates
+        grid.addWidget(lbl_start, 3, 0, alignment=Qt.AlignmentFlag.AlignRight)
+        grid.addWidget(self.start_date, 3, 1)
+        grid.addWidget(lbl_end, 3, 2, alignment=Qt.AlignmentFlag.AlignRight)
+        grid.addWidget(self.end_date, 3, 3)
 
-        label7.grid(row=2, column=0, padx=5, pady=5, sticky="e")
-        self.output_filename_entry.grid(
-            row=2, column=1, columnspan=3, padx=5, pady=5, sticky=tk.W + tk.E
-        )
-        choose_output_filename_button.grid(row=2, column=4, padx=5, pady=10)
+        # Row 4 – Separator
+        grid.addWidget(separator, 4, 0, 1, 5)
 
-        label8.grid(row=3, column=0, padx=5, pady=5, sticky="e")
-        self.start_date.grid(row=3, column=1, padx=5, pady=5)
+        # Row 5 – Submit button (aligned right)
+        grid.addWidget(btn_submit, 5, 3, 1, 1, alignment=Qt.AlignmentFlag.AlignRight)
 
-        label9.grid(row=3, column=2, padx=5, pady=5, sticky="e")
-        self.end_date.grid(row=3, column=3, padx=5, pady=5)
+        # Apply layout and fix size (non‑resizable)
+        self.setLayout(grid)
+        self.setFixedSize(self.sizeHint())
 
-        separator.grid(row=4, column=0, columnspan=5, pady=10, sticky=tk.W + tk.E)
+        # ----- database check ------------------------------------------------
+        if not Path("akebono.db").is_file():
+            try:
+                db_win = DatabaseWindow(self)
+                db_win.exec()
+            except Exception as ex:
+                QMessageBox.critical(
+                    self,
+                    "Database error",
+                    f"Could not open the database configuration window:\n{ex}",
+                )
 
-        ok_button.grid(row=5, column=3, pady=5)
-
-        if not os.path.isfile("akebono.db"):
-            database_window = DatabaseWindow(self.window)
-            database_window.run()
+    def _setup_icon(self):
+        icon_path = os.path.join(os.path.dirname(__file__), "images", "icon.png")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+        else:
+            # Silently ignore
+            pass
 
     def on_button_press(self):
 
-        if not os.path.isfile("akebono.db"):
-            database_window = DatabaseWindow(self.window)
-            database_window.run()
-            return
 
         try:
-            start_date = dt.date.fromisoformat(self.start_date.get())
-            end_date = dt.date.fromisoformat(self.end_date.get())
-            shell = float(self.shell_entry.get().strip())
-            shell_delta = float(self.shell_delta_entry.get().strip())
-            longitude = float(self.longitude_entry.get().strip())
-            longitude_delta = float(self.longitude_delta_entry.get().strip())
+            start_date = dt.date.fromisoformat(self.start_date.date().toString('yyyy-MM-dd'))
+            end_date = dt.date.fromisoformat(self.end_date.date().toString('yyyy-MM-dd'))
+            shell = float(self.shell_entry.text().strip())
+            shell_delta = float(self.shell_delta_entry.text().strip())
+            longitude = float(self.longitude_entry.text().strip())
+            longitude_delta = float(self.longitude_delta_entry.text().strip())
         except ValueError:
             return
 
-        output_filename = self.output_filename_entry.get()
+        output_filename = self.output_filename_entry.text()
 
         parameters = Parameters(
             start_date=start_date,
@@ -106,24 +134,19 @@ class MainWindow:
             longitude_delta=longitude_delta,
             output_filename=output_filename,
         )
+
+        print(parameters)
+
         search = Search(parameters)
         search.run()
 
-    # def choose_orbit_directory_button_press(self):
-    #     database_window = DatabaseWindow(self.window)
-    #     database_window.run()
-
-
-        # directory_path = filedialog.askdirectory()
-        # self.orbit_directory_entry.delete(0, tk.END)
-        # self.orbit_directory_entry.insert(0, directory_path)
-
     def choose_output_filename_button_press(self):
-        pass
 
-        # filename = filedialog.asksaveasfilename(defaultextension=".txt")
-        # self.output_filename_entry.delete(0, tk.END)
-        # self.output_filename_entry.insert(0, filename)
-
-    def run(self):
-        self.window.mainloop()
+        file_name, _ = QFileDialog.getSaveFileName(
+            self,
+            "Choose output file",
+            "",
+            "All Files (*)",
+        )
+        if file_name:
+            self.output_filename_entry.setText(file_name)

@@ -1,81 +1,130 @@
 import os
-import tkinter as tk
-from tkinter import filedialog
-from tkinter import ttk
+from pathlib import Path
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import (
+    QDialog,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QFileDialog,
+    QGridLayout,
+    QFrame,
+    QMessageBox,
+)
+
+
 from database import Database
 
 
-class DatabaseWindow:
-    def __init__(self, parent):
-        self.parent = parent
-        self.window = tk.Toplevel(parent)
+class DatabaseWindow(QDialog):
 
-        self.window.resizable(False, False)
+    def __init__(self, parent: QDialog):
+        super().__init__(parent)
 
-        label5 = tk.Label(self.window, text="Directory with orbit files:")
-        label6 = tk.Label(self.window, text="Directory with data files:")
+        self.setWindowTitle("Create Akebono database")
+        self.setModal(True)
+        self.setFixedSize(self.sizeHint())  # non‑resizable
 
-        separator = ttk.Separator(self.window, orient=tk.HORIZONTAL)
+        # widgets
+        lbl_orbit = QLabel("Directory with orbit files:")
+        lbl_data = QLabel("Directory with data files:")
 
-        self.orbit_directory_entry = tk.Entry(self.window)
-        self.datafile_directory_entry = tk.Entry(self.window)
+        self.orbit_directory_entry = QLineEdit()
+        self.datafile_directory_entry = QLineEdit()
 
-        ok_button = tk.Button(
-            self.window, text="Create database", command=self.on_button_press
+        btn_choose_orbit = QPushButton("Choose")
+        btn_choose_data = QPushButton("Choose")
+        btn_create_db = QPushButton("Create database")
+
+        btn_choose_orbit.clicked.connect(self._choose_orbit_directory)
+        btn_choose_data.clicked.connect(self._choose_datafile_directory)
+        btn_create_db.clicked.connect(self._create_database)
+
+        # Separator – thin horizontal line
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
+
+        # layout
+        grid = QGridLayout()
+        # row 0 – orbit directory
+        grid.addWidget(lbl_orbit, 0, 0, alignment=Qt.AlignmentFlag.AlignRight)
+        grid.addWidget(self.orbit_directory_entry, 0, 1, 1, 3)
+        grid.addWidget(btn_choose_orbit, 0, 4)
+
+        # row 1 – datafile directory
+        grid.addWidget(lbl_data, 1, 0, alignment=Qt.AlignmentFlag.AlignRight)
+        grid.addWidget(self.datafile_directory_entry, 1, 1, 1, 3)
+        grid.addWidget(btn_choose_data, 1, 4)
+
+        # row 2 – separator
+        grid.addWidget(separator, 2, 0, 1, 5)
+
+        # row 3 – create‑db button (right‑aligned)
+        grid.addWidget(btn_create_db, 3, 3, alignment=Qt.AlignmentFlag.AlignRight)
+
+        self.setLayout(grid)
+        self.setFixedSize(self.sizeHint())
+
+    def _choose_orbit_directory(self):
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Select directory that contains orbit files",
+            str(Path.home()),
         )
-        choose_orbit_directory_button = tk.Button(
-            self.window, text="Choose", command=self.choose_orbit_directory_button_press
+        if directory:
+            self.orbit_directory_entry.setText(directory)
+
+    def _choose_datafile_directory(self):
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Select directory that contains data files",
+            str(Path.home()),
         )
-        choose_datafile_directory_button = tk.Button(
-            self.window,
-            text="Choose",
-            command=self.choose_datafile_directory_button_press,
-        )
+        if directory:
+            self.datafile_directory_entry.setText(directory)
 
-        label5.grid(row=0, column=0, padx=5, pady=5, sticky="e")
-        self.orbit_directory_entry.grid(
-            row=0, column=1, columnspan=3, padx=5, pady=5, sticky=tk.W + tk.E
-        )
-        choose_orbit_directory_button.grid(row=0, column=4, padx=5, pady=10)
-
-        label6.grid(row=1, column=0, padx=5, pady=5, sticky="e")
-        self.datafile_directory_entry.grid(
-            row=1, column=1, columnspan=3, padx=5, pady=5, sticky=tk.W + tk.E
-        )
-        choose_datafile_directory_button.grid(row=1, column=4, padx=5, pady=10)
-
-        separator.grid(row=2, column=0, columnspan=5, pady=10, sticky=tk.W + tk.E)
-
-        ok_button.grid(row=3, column=3, pady=5)
-
-    def on_button_press(self):
-
-        if os.path.isfile("akebono.db"):
+    def _create_database(self):
+        db_path = Path("akebono.db")
+        if db_path.is_file():
+            QMessageBox.information(
+                self,
+                "Database already exists",
+                f"The file '{db_path}' is already present - nothing to do.",
+            )
             return
 
-        orbit_directory = self.orbit_directory_entry.get()
-        datafile_directory = self.datafile_directory_entry.get()
+        orbit_dir = self.orbit_directory_entry.text().strip()
+        datafile_dir = self.datafile_directory_entry.text().strip()
 
-        if orbit_directory and datafile_directory:
+        if not orbit_dir or not datafile_dir:
+            QMessageBox.warning(
+                self,
+                "Missing information",
+                "Both directory fields must be filled before creating the database.",
+            )
+            return
+
+        try:
             db = Database()
-            db.connect("akebono.db")
+            db.connect(str(db_path))
             db.create_data_table()
             db.create_orbits_table()
-            db.create_database(orbit_directory, datafile_directory)
+            db.create_database(orbit_dir, datafile_dir)
             db.close()
-            self.window.destroy()
+        except Exception as ex:
+            QMessageBox.critical(
+                self,
+                "Database creation failed",
+                f"An error occurred while building the DB:\n{ex}",
+            )
+            return
 
-    def choose_orbit_directory_button_press(self):
-        directory_path = filedialog.askdirectory()
-        self.orbit_directory_entry.delete(0, tk.END)
-        self.orbit_directory_entry.insert(0, directory_path)
-
-    def choose_datafile_directory_button_press(self):
-        directory_path = filedialog.askdirectory()
-        self.datafile_directory_entry.delete(0, tk.END)
-        self.datafile_directory_entry.insert(0, directory_path)
-
-    def run(self):
-        self.window.transient(self.parent)
-        self.window.grab_set()
-        self.parent.wait_window(self.window)
+        QMessageBox.information(
+            self,
+            "Success",
+            f"The database '{db_path}' has been created successfully.",
+        )
+        self.accept()
