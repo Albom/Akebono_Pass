@@ -2,7 +2,15 @@ import os
 from pathlib import Path
 import datetime as dt
 
-from PySide6.QtCore import Qt, QDate
+from PySide6.QtCore import (
+    Qt,
+    QDate,
+    QObject,
+    QRunnable,
+    QThreadPool,
+    Signal,
+    Slot,
+)
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QWidget,
@@ -14,17 +22,37 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QFrame,
     QMessageBox,
+    QStatusBar,
 )
 
 from database_window import DatabaseWindow
 from processing import Parameters, Search
 
 
+class WorkerSignals(QObject):
+    progress = Signal(int)
+    finished = Signal(str)
+
+
+class Task(QRunnable):
+    def __init__(self, parameters: Parameters, signals: WorkerSignals):
+        super().__init__()
+        self.parameters = parameters
+        self.signals = signals
+
+    @Slot()
+    def run(self) -> None:
+        search = Search(self.parameters)
+        search.run()
+        self.signals.progress.emit(100)
+        self.signals.finished.emit("Done.")
+
+
 class MainWindow(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.setWindowTitle("Akebono_Pass 0.1")
+        self.setWindowTitle("Akebono_Pass 0.2")
         self._setup_icon()
 
         lbl_L = QLabel("L:")
@@ -56,6 +84,20 @@ class MainWindow(QWidget):
         separator.setFrameShape(QFrame.HLine)
         separator.setFrameShadow(QFrame.Sunken)
 
+        self.status_bar = QStatusBar()
+
+        self.widgets = [
+            btn_submit,
+            btn_choose,
+            self.start_date,
+            self.end_date,
+            self.shell_entry,
+            self.shell_delta_entry,
+            self.longitude_entry,
+            self.longitude_delta_entry,
+            self.output_filename_entry,
+        ]
+
         grid = QGridLayout()
         # Row 0 – L and ΔL
         grid.addWidget(lbl_L, 0, 0, alignment=Qt.AlignmentFlag.AlignRight)
@@ -86,6 +128,9 @@ class MainWindow(QWidget):
         # Row 5 – Submit button (aligned right)
         grid.addWidget(btn_submit, 5, 3, 1, 1, alignment=Qt.AlignmentFlag.AlignRight)
 
+        # Row 6 – Status bar
+        grid.addWidget(self.status_bar, 6, 0, 1, 5)
+
         # Apply layout and fix size (non‑resizable)
         self.setLayout(grid)
         self.setFixedSize(self.sizeHint())
@@ -102,6 +147,11 @@ class MainWindow(QWidget):
                     f"Could not open the database configuration window:\n{ex}",
                 )
 
+        self.thread_pool = QThreadPool.globalInstance()
+        self.signals = WorkerSignals()
+        self.signals.progress.connect(self.on_progress)
+        self.signals.finished.connect(self.on_finished)
+
     def _setup_icon(self):
         icon_path = os.path.join(os.path.dirname(__file__), "images", "icon.png")
         if os.path.exists(icon_path):
@@ -112,10 +162,13 @@ class MainWindow(QWidget):
 
     def on_button_press(self):
 
-
         try:
-            start_date = dt.date.fromisoformat(self.start_date.date().toString('yyyy-MM-dd'))
-            end_date = dt.date.fromisoformat(self.end_date.date().toString('yyyy-MM-dd'))
+            start_date = dt.date.fromisoformat(
+                self.start_date.date().toString("yyyy-MM-dd")
+            )
+            end_date = dt.date.fromisoformat(
+                self.end_date.date().toString("yyyy-MM-dd")
+            ) + dt.timedelta(days=1)
             shell = float(self.shell_entry.text().strip())
             shell_delta = float(self.shell_delta_entry.text().strip())
             longitude = float(self.longitude_entry.text().strip())
@@ -135,10 +188,13 @@ class MainWindow(QWidget):
             output_filename=output_filename,
         )
 
-        print(parameters)
+        for w in self.widgets:
+            w.setEnabled(False)
 
-        search = Search(parameters)
-        search.run()
+        self.status_bar.showMessage("Working...")
+
+        task = Task(parameters, self.signals)
+        self.thread_pool.start(task)
 
     def choose_output_filename_button_press(self):
 
@@ -150,3 +206,18 @@ class MainWindow(QWidget):
         )
         if file_name:
             self.output_filename_entry.setText(file_name)
+
+    @Slot(int)
+    def on_progress(self, value: int):
+        pass
+
+    @Slot(str)
+    def on_finished(self, message: str):
+        self.status_bar.showMessage(message, 5000)
+        QMessageBox.information(
+                    self,
+                    "Task",
+                    message,
+                )
+        for w in self.widgets:
+            w.setEnabled(True)
